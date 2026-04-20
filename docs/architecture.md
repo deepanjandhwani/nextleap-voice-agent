@@ -292,6 +292,12 @@ User audio
 | `GET` | `/health` | Health check `{"status": "ok"}` |
 | `GET` | `/static/...` | Static assets |
 
+### Deployment (Vercel)
+
+The same FastAPI app can run on **[Vercel](https://vercel.com/docs/frameworks/backend/fastapi)** using [`api/index.py`](../api/index.py) as the detected entrypoint (re-export of `advisor_scheduler.api.app:app`). Static HTML is duplicated under [`public/`](../public/) (`index.html`, `secure-details/index.html`) so the platform can serve the UI from the CDN; keep those files in sync when editing [`api/static/`](../src/advisor_scheduler/api/static/).
+
+Configure **`PUBLIC_BASE_URL`**, **`GEMINI_API_KEY`**, **`DEEPGRAM_API_KEY`**, and Google/MCP variables in the Vercel project to match production. Expect **serverless** behavior: in-memory **session** state is not guaranteed to stick to one instance across requests; allow enough **function duration** for `/voice-turn` (STT + engine + TTS). Details and caveats are in the repo root [README.md](../README.md).
+
 ### `POST /chat`
 
 **Request**

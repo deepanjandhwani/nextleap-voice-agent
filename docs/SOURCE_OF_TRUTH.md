@@ -27,10 +27,16 @@
 |--------|------|---------|
 | `POST` | `/chat` | JSON `session_id`, `message`, optional `channel` (`chat` default, `voice` for speakable formatting) → assistant reply and `session_state` |
 | `POST` | `/voice-turn` | Raw audio request body plus `session_id` query param → Deepgram STT, existing engine turn, Deepgram TTS, transcript + assistant payload + base64 audio |
-| `GET` | `/` | Serves chat UI (`api/static/index.html`) |
-| `GET` | `/secure-details` | Demo static page for secure-link landing (`api/static/secure-details.html`) |
+| `GET` | `/` | Serves chat UI (`api/static/index.html` via FastAPI; **Vercel** also mirrors the same HTML at [`public/index.html`](../public/index.html) for edge delivery) |
+| `GET` | `/secure-details` | Demo static page for secure-link landing (`api/static/secure-details.html`; **Vercel** mirror: [`public/secure-details/index.html`](../public/secure-details/index.html)) |
 | `GET` | `/health` | `{"status": "ok"}` |
 | — | `/static/*` | Static assets |
+
+### Vercel (production hosting)
+
+- **ASGI entry:** [`api/index.py`](../api/index.py) re-exports `app` from [`advisor_scheduler/api/app.py`](../src/advisor_scheduler/api/app.py) so the Vercel builder detects FastAPI.
+- **Packaging:** [`pyproject.toml`](../pyproject.toml) declares `[project.scripts] app = "advisor_scheduler.api.app:app"` and `[tool.setuptools.package-data]` for `api/static/*.html` inside the installed package.
+- **Operator:** set `PUBLIC_BASE_URL` and secrets in the Vercel project; see repo root [README.md](../README.md). In-memory sessions may not match a single long-lived local server across invocations.
 
 ## Session states (actual strings in code)
 

@@ -5,7 +5,8 @@
 | Document | Purpose |
 |----------|---------|
 | **[SOURCE_OF_TRUTH.md](SOURCE_OF_TRUTH.md)** | Code map: modules, routes, states, phases |
-| [architecture.md](architecture.md) | Modules, data flow, hybrid engine, state machine, HTTP |
+| [architecture.md](architecture.md) | Modules, data flow, hybrid engine, state machine, HTTP, deployment |
+| [README.md](../README.md) (repo root) | Local run, tests, **Vercel deploy**, env overview |
 | [advisor_scheduler_spec.md](advisor_scheduler_spec.md) | Product spec: intents, compliance, booking, MCP |
 | [conversation_flows.md](conversation_flows.md) | Interaction-level flows |
 | [mcp_contracts.md](mcp_contracts.md) | Adapter / MCP tool contracts |
@@ -30,4 +31,4 @@
 
 See [phase2_operator_setup.md](phase2_operator_setup.md) and [`.cursor/plans/Phase_2_pending.md`](../.cursor/plans/Phase_2_pending.md).
 
-**Phase 3 (voice)** — **MVP in the static UI:** the chat page uses the **Web Speech API** (hold mic → STT → `POST /chat` with `channel: "voice"` → TTS). Server-side **`formatters/voice.py`** shortens the assistant reply for listening. Cloud STT/TTS and streaming audio are **not** in this repo.
+**Phase 3 (voice)** — **MVP in the static UI:** hold-to-talk sends recorded audio to **`POST /voice-turn`** (Deepgram STT/TTS on the server). The UI can also use the browser **Web Speech API** for recognition with **`POST /chat`** and `channel: "voice"` for speakable text. Server-side **`formatters/voice.py`** (`format_for_voice`, `build_tts_text`) is the source of truth for shortened spoken copy.
