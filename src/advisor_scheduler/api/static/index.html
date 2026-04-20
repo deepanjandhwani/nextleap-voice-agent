@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advisor Scheduler</title>
+  <style>
+    :root {
+      --sidebar-bg: #1a1a1a;
+      --sidebar-fg: #e8e8e6;
+      --sidebar-muted: #8e8e8a;
+      --surface: #f9f9f7;
+      --surface-border: #e5e5e0;
+      --user-bubble: #e8e6e1;
+      --assistant-text: #1f1f1f;
+      --accent: #d97757;
+      --accent-hover: #c45f3d;
+      --status-tentative: #d97706;
+      --status-waitlisted: #2563eb;
+      --status-confirmed: #16a34a;
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: var(--font-sans); }
+
+    .app {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 260px;
+      min-width: 220px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-fg);
+      display: flex;
+      flex-direction: column;
+      padding: 1rem 0.875rem;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #d97757 0%, #8b5cf6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.75rem;
+      color: #fff;
+    }
+
+    .brand-text { font-weight: 600; font-size: 0.95rem; letter-spacing: -0.02em; }
+
+    .btn-new {
+      margin: 0 0.5rem;
+      padding: 0.6rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid #3f3f3c;
+      background: transparent;
+      color: var(--sidebar-fg);
+      font-size: 0.875rem;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-new:hover { background: #2a2a28; border-color: #555; }
+
+    .session-block {
+      margin-top: auto;
+      padding: 0.75rem 0.5rem;
+      border-top: 1px solid #333;
+      font-size: 0.7rem;
+      color: var(--sidebar-muted);
+      word-break: break-all;
+    }
+    .session-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; color: #6b6b66; }
+    .session-id { font-family: ui-monospace, monospace; color: #b8b8b3; font-size: 0.65rem; }
+    .session-state { margin-top: 0.5rem; font-size: 0.65rem; color: #7a7a75; }
+
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--surface);
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1.25rem 8rem;
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .msg-row {
+      display: flex;
+      margin-bottom: 1.25rem;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .msg-row.assistant .avatar {
+      background: #e8e6e1;
+      color: #444;
+    }
+    .msg-row.user .avatar {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .bubble-wrap { max-width: min(100%, 640px); }
+    .msg-row.user .bubble-wrap { text-align: right; }
+
+    .bubble {
+      display: inline-block;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-radius: 14px;
+      font-size: 0.9375rem;
+      line-height: 1.55;
+      color: var(--assistant-text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .msg-row.user .bubble {
+      background: var(--user-bubble);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .msg-row.assistant .bubble {
+      background: transparent;
+      padding-left: 0;
+    }
+
+    .bubble strong { font-weight: 600; }
+    .bubble ul { margin: 0.5em 0; padding-left: 1.25em; }
+
+    .booking-card {
+      margin-top: 0.75rem;
+      padding: 1rem 1.1rem;
+      border-radius: 12px;
+      border: 1px solid var(--surface-border);
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      max-width: 100%;
+    }
+    .booking-card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .chip {
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      background: #f0efec;
+      color: #333;
+    }
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      text-transform: capitalize;
+      font-weight: 500;
+    }
+    .badge.tentative { background: #fef3c7; color: var(--status-tentative); }
+    .badge.waitlisted { background: #dbeafe; color: var(--status-waitlisted); }
+    .badge.confirmed { background: #dcfce7; color: var(--status-confirmed); }
+    .badge.default { background: #f3f4f6; color: #4b5563; }
+
+    .btn-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-link:hover { background: var(--accent-hover); }
+
+    .composer {
+      position: fixed;
+      bottom: 0;
+      left: 260px;
+      right: 0;
+      padding: 0.75rem 1.25rem 1.25rem;
+      background: linear-gradient(to top, var(--surface) 85%, transparent);
+      max-width: calc(800px + 2.5rem);
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 720px) {
+      .sidebar { width: 0; min-width: 0; padding: 0; overflow: hidden; position: fixed; z-index: 10; height: 100%; transform: translateX(-100%); }
+      .sidebar.open { width: 260px; min-width: 220px; padding: 1rem 0.875rem; transform: translateX(0); }
+      .composer { left: 0; }
+      .menu-toggle {
+        display: flex !important;
+      }
+    }
+
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 0.75rem;
+      left: 0.75rem;
+      z-index: 11;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid var(--surface-border);
+      background: #fff;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .composer-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+      padding: 0.35rem 0.5rem 0.35rem 0.85rem;
+      border: 1px solid var(--surface-border);
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .composer-inner:focus-within {
+      border-color: #c4c4be;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    }
+
+    textarea {
+      flex: 1;
+      border: none;
+      resize: none;
+      min-height: 24px;
+      max-height: 160px;
+      padding: 0.65rem 0;
+      font-size: 0.9375rem;
+      font-family: inherit;
+      line-height: 1.45;
+      background: transparent;
+      outline: none;
+    }
+
+    .send-btn, .mic-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .send-btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .mic-btn {
+      background: #fff;
+      color: #444;
+      border: 1px solid var(--surface-border);
+    }
+    .mic-btn:hover:not(:disabled) {
+      background: #f3f3f0;
+      border-color: #c4c4be;
+    }
+    .mic-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .mic-btn.active {
+      background: #fef3c7;
+      border-color: var(--status-tentative);
+      color: var(--status-tentative);
+      box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.25);
+    }
+
+    .stop-speak-btn {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid var(--surface-border);
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      display: none;
+    }
+    .stop-speak-btn.show { display: inline-block; }
+    .stop-speak-btn:hover { background: #f5f5f2; }
+
+    .composer-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.35rem;
+      padding: 0 0.5rem;
+      font-size: 0.7rem;
+      color: #9c9c96;
+    }
+
+    .status-bar {
+      font-size: 0.75rem;
+      color: #6b6b66;
+      min-height: 1.2em;
+    }
+    .status-bar.thinking { color: var(--accent); }
+    .typing-dots span {
+      animation: blink 1.2s infinite;
+      opacity: 0.3;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.3; }
+      40% { opacity: 1; }
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #8e8e88;
+      padding: 3rem 1rem;
+      font-size: 0.95rem;
+    }
+    .empty-state h2 { font-size: 1.25rem; font-weight: 600; color: #3d3d38; margin: 0 0 0.5rem; }
+
+    .backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 9;
+    }
+    .backdrop.show { display: block; }
+  </style>
+</head>
+<body>
+  <button type="button" class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">NL</div>
+        <span class="brand-text">Advisor Scheduler</span>
+      </div>
+      <button type="button" class="btn-new" id="btnNew">+ New conversation</button>
+      <div class="session-block">
+        <div class="session-label">Session</div>
+        <div class="session-id" id="sessionIdDisplay">—</div>
+        <div class="session-state" id="sessionStateDisplay"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="messages" id="messages">
+        <div class="empty-state" id="emptyState">
+          <h2>How can I help?</h2>
+          <p>Book an advisor slot or ask about availability. All times are confirmed in IST.</p>
+        </div>
+      </div>
+      <div class="composer">
+        <div class="composer-inner">
+          <textarea id="input" rows="1" placeholder="Message Advisor Scheduler…" autocomplete="off"></textarea>
+          <button type="button" class="mic-btn" id="micBtn" aria-label="Hold to speak" title="Hold to speak">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+            </svg>
+          </button>
+          <button type="button" class="send-btn" id="sendBtn" aria-label="Send" title="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="composer-meta">
+          <span class="status-bar" id="statusBar"></span>
+          <span>
+            <button type="button" class="stop-speak-btn" id="stopSpeakBtn" title="Stop reading aloud">Stop speaking</button>
+            <span id="charCount">0 characters</span>
+          </span>
+        </div>
+        <p style="margin: 0.25rem 0.5rem 0; font-size: 0.65rem; color: #9c9c96; max-width: 800px;">Voice: hold the mic for at least half a second, then release. Audio is transcribed and played back by the server. Requires a secure context (HTTPS or localhost).</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+(function () {
+  const API_BASE = '';
+  const STORAGE_KEY = 'advisor_scheduler_session_id';
+
+  const messagesEl = document.getElementById('messages');
+  const emptyState = document.getElementById('emptyState');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const statusBar = document.getElementById('statusBar');
+  const charCount = document.getElementById('charCount');
+  const sessionIdDisplay = document.getElementById('sessionIdDisplay');
+  const sessionStateDisplay = document.getElementById('sessionStateDisplay');
+  const btnNew = document.getElementById('btnNew');
+  const sidebar = document.getElementById('sidebar');
+  const menuToggle = document.getElementById('menuToggle');
+  const backdrop = document.getElementById('backdrop');
+  const micBtn = document.getElementById('micBtn');
+  const stopSpeakBtn = document.getElementById('stopSpeakBtn');
+
+  let voiceAvailable = false;
+  let listenHold = false;
+  let isRecording = false;
+  let mediaStream = null;
+  let mediaRecorder = null;
+  let mediaChunks = [];
+  let recorderMimeType = '';
+  let audioContext = null;
+  let currentBufferSource = null;
+  let currentAudio = null;
+  let currentAudioUrl = null;
+  let recordingStartTime = 0;
+  let discardAudio = false;
+
+  let sessionId = sessionStorage.getItem(STORAGE_KEY);
+  if (!sessionId) {
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem(STORAGE_KEY, sessionId);
+  }
+
+  function updateSessionDisplay(stateText) {
+    sessionIdDisplay.textContent = sessionId.slice(0, 8) + '…';
+    sessionIdDisplay.title = sessionId;
+    if (stateText != null && stateText !== '') {
+      sessionStateDisplay.textContent = 'State: ' + stateText;
+    } else {
+      sessionStateDisplay.textContent = '';
+    }
+  }
+  updateSessionDisplay('');
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /** Minimal markdown: **bold**, newlines, lines starting with - or * as bullets */
+  function formatMessage(text) {
+    let html = escapeHtml(text);
+    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    const lines = html.split('\n');
+    let inList = false;
+    const out = [];
+    for (const line of lines) {
+      const bullet = /^(\s*)[-*]\s+(.+)$/.exec(line);
+      if (bullet) {
+        if (!inList) {
+          out.push('<ul>');
+          inList = true;
+        }
+        out.push('<li>' + bullet[2] + '</li>');
+      } else {
+        if (inList) {
+          out.push('</ul>');
+          inList = false;
+        }
+        out.push(line);
+      }
+    }
+    if (inList) out.push('</ul>');
+    return out.join('<br>');
+  }
+
+  function badgeClass(status) {
+    if (!status) return 'default';
+    const s = String(status).toLowerCase();
+    if (s.includes('tentative')) return 'tentative';
+    if (s.includes('waitlist')) return 'waitlisted';
+    if (s.includes('confirm')) return 'confirmed';
+    return 'default';
+  }
+
+  function removeEmptyState() {
+    if (emptyState && emptyState.parentNode) emptyState.remove();
+  }
+
+  function appendMessage(role, htmlContent, booking) {
+    removeEmptyState();
+    const row = document.createElement('div');
+    row.className = 'msg-row ' + (role === 'user' ? 'user' : 'assistant');
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = role === 'user' ? 'You' : 'A';
+    const wrap = document.createElement('div');
+    wrap.className = 'bubble-wrap';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = htmlContent;
+    wrap.appendChild(bubble);
+
+    if (booking && (booking.booking_code || booking.secure_link || booking.status)) {
+      const card = document.createElement('div');
+      card.className = 'booking-card';
+      const header = document.createElement('div');
+      header.className = 'booking-card-header';
+      if (booking.booking_code) {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = booking.booking_code;
+        header.appendChild(chip);
+      }
+      if (booking.status) {
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + badgeClass(booking.status);
+        badge.textContent = booking.status;
+        header.appendChild(badge);
+      }
+      card.appendChild(header);
+      if (booking.secure_link) {
+        const a = document.createElement('a');
+        a.className = 'btn-link';
+        a.href = booking.secure_link;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'Complete booking →';
+        card.appendChild(a);
+      }
+      wrap.appendChild(card);
+    }
+
+    row.appendChild(av);
+    row.appendChild(wrap);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function setThinking(on) {
+    if (on) {
+      statusBar.className = 'status-bar thinking';
+      statusBar.innerHTML = 'Thinking<span class="typing-dots"> <span>.</span><span>.</span><span>.</span></span>';
+      sendBtn.disabled = true;
+      micBtn.disabled = true;
+    } else {
+      statusBar.className = 'status-bar';
+      statusBar.textContent = '';
+      sendBtn.disabled = false;
+      micBtn.disabled = !voiceAvailable;
+    }
+  }
+
+  function cancelSpeech() {
+    if (currentBufferSource) {
+      try {
+        currentBufferSource.stop(0);
+      } catch (err) {}
+      try {
+        currentBufferSource.disconnect();
+      } catch (err) {}
+      currentBufferSource = null;
+    }
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.src = '';
+      currentAudio = null;
+    }
+    if (currentAudioUrl) {
+      URL.revokeObjectURL(currentAudioUrl);
+      currentAudioUrl = null;
+    }
+    updateStopSpeakVisibility();
+  }
+
+  function updateStopSpeakVisibility() {
+    if (currentBufferSource) {
+      stopSpeakBtn.classList.add('show');
+    } else if (currentAudio && !currentAudio.paused && !currentAudio.ended) {
+      stopSpeakBtn.classList.add('show');
+    } else {
+      stopSpeakBtn.classList.remove('show');
+    }
+  }
+
+  /** Resume Web Audio on a user gesture so playback works after async /voice-turn. */
+  function unlockAudioOnUserGesture() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audioContext) {
+      audioContext = new AC();
+    }
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+  }
+
+  function pickRecorderMimeType() {
+    if (!window.MediaRecorder) return '';
+    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+    for (const type of candidates) {
+      if (!MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return '';
+  }
+
+  function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  async function playResponseAudio(audioBase64, mimeType) {
+    if (!audioBase64) return;
+    cancelSpeech();
+    const bytes = base64ToBytes(audioBase64);
+
+    const playWithWebAudio = async function () {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) {
+        throw new Error('Web Audio API not available');
+      }
+      if (!audioContext) {
+        audioContext = new AC();
+      }
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume();
+      }
+      const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      const audioBuffer = await audioContext.decodeAudioData(copy);
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.onended = function () {
+        currentBufferSource = null;
+        updateStopSpeakVisibility();
+      };
+      currentBufferSource = source;
+      source.start(0);
+      updateStopSpeakVisibility();
+    };
+
+    try {
+      await playWithWebAudio();
+    } catch (err) {
+      try {
+        const audioBlob = new Blob([bytes], { type: mimeType || 'audio/mpeg' });
+        currentAudioUrl = URL.createObjectURL(audioBlob);
+        currentAudio = new Audio(currentAudioUrl);
+        currentAudio.setAttribute('playsinline', 'true');
+        currentAudio.onended = cancelSpeech;
+        currentAudio.onerror = cancelSpeech;
+        const playPromise = currentAudio.play();
+        updateStopSpeakVisibility();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(function () {
+            cancelSpeech();
+            statusBar.className = 'status-bar';
+            statusBar.textContent =
+              'Could not play audio. Check system volume, or try Chrome; ensure you pressed the mic to unlock sound.';
+          });
+        }
+      } catch (err2) {
+        statusBar.className = 'status-bar';
+        statusBar.textContent = 'Could not play audio response.';
+      }
+    }
+  }
+
+  async function ensureMediaStream() {
+    if (mediaStream && mediaStream.active) return mediaStream;
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    return mediaStream;
+  }
+
+  function initVoiceRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      micBtn.disabled = true;
+      micBtn.title = 'Voice not supported in this browser';
+      return;
+    }
+    recorderMimeType = pickRecorderMimeType();
+    voiceAvailable = true;
+    micBtn.disabled = false;
+    micBtn.title = 'Hold to speak';
+  }
+
+  async function startListenHold(e) {
+    if (e && e.button != null && e.button !== 0) return;
+    if (!voiceAvailable || listenHold || sendBtn.disabled) return;
+
+    listenHold = true;
+    unlockAudioOnUserGesture();
+    cancelSpeech();
+    micBtn.classList.add('active');
+    statusBar.className = 'status-bar thinking';
+    statusBar.textContent = 'Listening…';
+
+    try {
+      const stream = await ensureMediaStream();
+      if (!listenHold) {
+        micBtn.classList.remove('active');
+        statusBar.className = 'status-bar';
+        statusBar.textContent = '';
+        return;
+      }
+
+      mediaChunks = [];
+      discardAudio = false;
+      recordingStartTime = Date.now();
+      mediaRecorder = recorderMimeType
+        ? new MediaRecorder(stream, { mimeType: recorderMimeType })
+        : new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = function (event) {
+        if (event.data && event.data.size) {
+          mediaChunks.push(event.data);
+        }
+      };
+      mediaRecorder.onerror = function () {
+        isRecording = false;
+        listenHold = false;
+        discardAudio = false;
+        micBtn.classList.remove('active');
+        statusBar.className = 'status-bar';
+        statusBar.textContent = 'Could not record audio. Try again.';
+      };
+      mediaRecorder.onstop = function () {
+        const blob = new Blob(mediaChunks, {
+          type: (mediaRecorder && mediaRecorder.mimeType) || recorderMimeType || 'application/octet-stream',
+        });
+        mediaRecorder = null;
+        mediaChunks = [];
+        isRecording = false;
+        if (discardAudio) {
+          discardAudio = false;
+          return;
+        }
+        if (!blob.size || blob.size < 1000) {
+          statusBar.className = 'status-bar';
+          statusBar.textContent = blob.size
+            ? 'Recording too short. Hold the mic button for at least half a second.'
+            : 'No audio captured. Please try again.';
+          return;
+        }
+        sendFromVoice(blob);
+      };
+      mediaRecorder.start(250);
+      isRecording = true;
+    } catch (err) {
+      listenHold = false;
+      isRecording = false;
+      micBtn.classList.remove('active');
+      statusBar.className = 'status-bar';
+      statusBar.textContent =
+        err && err.name === 'NotAllowedError'
+          ? 'Microphone permission denied.'
+          : 'Could not start microphone. Try again.';
+    }
+  }
+
+  function stopListenHold() {
+    if (!listenHold) return;
+    listenHold = false;
+    micBtn.classList.remove('active');
+    if (!mediaRecorder || !isRecording) {
+      statusBar.className = 'status-bar';
+      statusBar.textContent = '';
+      return;
+    }
+    const holdMs = Date.now() - recordingStartTime;
+    if (holdMs < 500) {
+      discardAudio = true;
+      statusBar.className = 'status-bar';
+      statusBar.textContent = 'Hold the mic button longer to record speech.';
+    } else {
+      statusBar.className = 'status-bar thinking';
+      statusBar.textContent = 'Transcribing…';
+    }
+    try {
+      mediaRecorder.stop();
+    } catch (err) {
+      isRecording = false;
+      discardAudio = false;
+      statusBar.className = 'status-bar';
+      statusBar.textContent = 'Could not stop microphone. Try again.';
+    }
+  }
+
+  function setConnecting(msg) {
+    statusBar.className = 'status-bar thinking';
+    statusBar.textContent = msg || '';
+  }
+
+  async function checkHealth() {
+    setConnecting('Connecting…');
+    try {
+      const r = await fetch(API_BASE + '/health', { method: 'GET' });
+      if (!r.ok) throw new Error('Health check failed');
+      statusBar.className = 'status-bar';
+      statusBar.textContent = '';
+    } catch (e) {
+      statusBar.className = 'status-bar';
+      statusBar.textContent = 'Cannot reach server. Start the API (e.g. python -m advisor_scheduler).';
+    }
+  }
+
+  async function postChat(text, channel) {
+    const controller = new AbortController();
+    const timeoutMs = 30000;
+    const timeoutId = window.setTimeout(function () {
+      controller.abort();
+    }, timeoutMs);
+    try {
+      const res = await fetch(API_BASE + '/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ session_id: sessionId, message: text, channel: channel }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || res.statusText);
+      }
+      return await res.json();
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  async function postVoiceTurn(audioBlob) {
+    const controller = new AbortController();
+    const timeoutMs = 45000;
+    const timeoutId = window.setTimeout(function () {
+      controller.abort();
+    }, timeoutMs);
+    try {
+      const res = await fetch(
+        API_BASE + '/voice-turn?session_id=' + encodeURIComponent(sessionId),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': audioBlob.type || 'application/octet-stream' },
+          signal: controller.signal,
+          body: audioBlob,
+        }
+      );
+      if (!res.ok) {
+        let detail = res.statusText;
+        try {
+          const body = await res.json();
+          detail = body.detail || detail;
+        } catch (err) {
+          detail = (await res.text()) || detail;
+        }
+        throw new Error(detail);
+      }
+      return await res.json();
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendMessage('user', formatMessage(text));
+    input.value = '';
+    input.style.height = 'auto';
+    charCount.textContent = '0 characters';
+    cancelSpeech();
+    setThinking(true);
+
+    try {
+      const data = await postChat(text, 'chat');
+      const booking = {
+        booking_code: data.booking_code,
+        secure_link: data.secure_link,
+        status: data.status,
+      };
+      appendMessage('assistant', formatMessage(data.response || ''), booking);
+      updateSessionDisplay(data.session_state || '');
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        appendMessage(
+          'assistant',
+          formatMessage('Error: The request timed out after 30 seconds. Please try again.')
+        );
+      } else {
+        appendMessage('assistant', formatMessage('Error: ' + (err.message || String(err))));
+      }
+    } finally {
+      setThinking(false);
+    }
+  }
+
+  async function sendFromVoice(audioBlob) {
+    if (!audioBlob || !audioBlob.size) return;
+    setThinking(true);
+    statusBar.className = 'status-bar thinking';
+    statusBar.textContent = 'Transcribing…';
+
+    try {
+      const data = await postVoiceTurn(audioBlob);
+      appendMessage('user', formatMessage(data.transcript || ''));
+      const booking = {
+        booking_code: data.booking_code,
+        secure_link: data.secure_link,
+        status: data.status,
+      };
+      appendMessage('assistant', formatMessage(data.response || ''), booking);
+      updateSessionDisplay(data.session_state || '');
+      if (!data.audio_base64) {
+        statusBar.className = 'status-bar';
+        statusBar.textContent =
+          'No audio for this reply (TTS failed or is unavailable). Check server logs and Deepgram settings.';
+      }
+      await playResponseAudio(data.audio_base64, data.audio_mime_type);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        appendMessage(
+          'assistant',
+          formatMessage('Error: The request timed out after 30 seconds. Please try again.')
+        );
+      } else {
+        appendMessage('assistant', formatMessage('Error: ' + (err.message || String(err))));
+      }
+    } finally {
+      setThinking(false);
+    }
+  }
+
+  function newConversation() {
+    cancelSpeech();
+    sessionId = crypto.randomUUID();
+    sessionStorage.setItem(STORAGE_KEY, sessionId);
+    messagesEl.innerHTML = '';
+    const es = document.createElement('div');
+    es.className = 'empty-state';
+    es.id = 'emptyState';
+    es.innerHTML = '<h2>How can I help?</h2><p>Book an advisor slot or ask about availability. All times are confirmed in IST.</p>';
+    messagesEl.appendChild(es);
+    updateSessionDisplay('');
+    input.focus();
+    closeMobileMenu();
+  }
+
+  function resizeTextarea() {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 160) + 'px';
+  }
+
+  input.addEventListener('input', function () {
+    resizeTextarea();
+    charCount.textContent = input.value.length + ' characters';
+  });
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+  btnNew.addEventListener('click', newConversation);
+
+  micBtn.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    try {
+      micBtn.setPointerCapture(e.pointerId);
+    } catch (err) {}
+    unlockAudioOnUserGesture();
+    startListenHold(e);
+  });
+  micBtn.addEventListener('pointerup', function (e) {
+    stopListenHold();
+    try {
+      micBtn.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+  });
+  micBtn.addEventListener('pointercancel', function () {
+    stopListenHold();
+  });
+  micBtn.addEventListener('lostpointercapture', function () {
+    stopListenHold();
+  });
+  stopSpeakBtn.addEventListener('click', function () {
+    cancelSpeech();
+  });
+
+  initVoiceRecording();
+
+  function closeMobileMenu() {
+    sidebar.classList.remove('open');
+    backdrop.classList.remove('show');
+  }
+  function openMobileMenu() {
+    sidebar.classList.add('open');
+    backdrop.classList.add('show');
+  }
+  menuToggle.addEventListener('click', function () {
+    if (sidebar.classList.contains('open')) closeMobileMenu();
+    else openMobileMenu();
+  });
+  backdrop.addEventListener('click', closeMobileMenu);
+
+  checkHealth();
+  input.focus();
+})();
+  </script>
+</body>
+</html>

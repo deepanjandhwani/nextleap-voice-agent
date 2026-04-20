@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact details — Advisor Scheduler</title>
+  <style>
+    :root {
+      --bg: #f9f9f7;
+      --text: #1f1f1f;
+      --muted: #5c5c58;
+      --accent: #d97757;
+      --border: #e5e5e0;
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      max-width: 32rem;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem 1.5rem;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 0.75rem;
+      letter-spacing: -0.02em;
+    }
+    p {
+      margin: 0 0 1rem;
+      line-height: 1.55;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .code {
+      font-family: ui-monospace, monospace;
+      font-size: 1rem;
+      padding: 0.65rem 0.85rem;
+      background: #f4f4f1;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      word-break: break-all;
+      color: var(--text);
+    }
+    .code-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+    a.back {
+      display: inline-block;
+      margin-top: 1.25rem;
+      color: var(--accent);
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+    a.back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Secure contact details</h1>
+    <p>
+      Submit your contact information only through the official process your advisor uses for this program.
+      Do not send phone numbers, email addresses, or other identifiers through the chat or voice assistant.
+    </p>
+    <div class="code-label">Booking reference</div>
+    <div class="code" id="ref">—</div>
+    <a class="back" href="/">← Back to scheduler</a>
+  </div>
+  <script>
+    (function () {
+      var code = new URLSearchParams(window.location.search).get("code");
+      var el = document.getElementById("ref");
+      if (code) el.textContent = code;
+    })();
+  </script>
+</body>
+</html>
