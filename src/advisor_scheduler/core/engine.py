@@ -570,6 +570,7 @@ def _maybe_mid_flow_intent_switch(engine: ConversationEngine, session: Session, 
         preserve_day = session.preferred_date if preserve_date else None
         preserve_day_label = session.requested_day_label if preserve_date else None
         preserve_window = session.time_window if preserve_date else None
+        preserve_topic = session.topic if preserve_date else None
         _reset_booking_scratch(session)
         session.target_booking = None
         session.active_intent = "book_new"
@@ -577,16 +578,19 @@ def _maybe_mid_flow_intent_switch(engine: ConversationEngine, session: Session, 
             session.preferred_date = preserve_day
             session.requested_day_label = preserve_day_label
             session.time_window = preserve_window
+        if preserve_topic is not None:
+            session.topic = preserve_topic
         blocked = _apply_booking_day_from_user_message(engine, session, message)
         if blocked is not None:
             return blocked
         matched_topic = match_topic(message)
         if matched_topic:
             session.topic = matched_topic
+        if session.topic:
             if session.preferred_date is not None:
                 return _offer_slots(engine, session, reschedule=False)
             session.state = "collect_time"
-            return _wrap(session, _collect_time_prompt_after_topic(session, matched_topic))
+            return _wrap(session, _collect_time_prompt_after_topic(session, session.topic))
         session.state = "collect_topic"
         return _wrap(session, f"Sure. Let's book a slot. What topic would you like to discuss? {topics_menu()}")
     return None
@@ -935,6 +939,11 @@ def _try_deterministic_turn(engine: ConversationEngine, session: Session, messag
                 "That date is already in the past. Please share a day from today onward in IST.",
             )
         if _affirmative(message):
+            if session.topic:
+                if session.preferred_date is not None:
+                    return _offer_slots(engine, session, reschedule=False)
+                session.state = "collect_time"
+                return _wrap(session, _collect_time_prompt_after_topic(session, session.topic))
             session.state = "collect_topic"
             return _wrap(
                 session,

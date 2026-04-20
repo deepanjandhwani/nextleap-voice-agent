@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from urllib.parse import urljoin, urlparse
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Served by this app at GET /secure-details; use with PUBLIC_BASE_URL in each environment.
@@ -27,6 +28,16 @@ def _is_valid_http_origin(url: str) -> bool:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # ``python -m advisor_scheduler`` bind address. ``PORT`` is common on PaaS.
+    api_host: str = Field(
+        default="127.0.0.1",
+        validation_alias=AliasChoices("ADVISOR_API_HOST"),
+    )
+    api_port: int = Field(
+        default=8000,
+        validation_alias=AliasChoices("ADVISOR_API_PORT", "PORT"),
+    )
 
     # Full URL (e.g. https://app.example.com/secure-details), OR a path only (e.g. /secure-details)
     # with public_base_url set. Empty means "use public_base_url + DEFAULT_SECURE_DETAILS_PATH" when

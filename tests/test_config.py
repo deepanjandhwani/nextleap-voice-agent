@@ -59,3 +59,15 @@ def test_rejects_placeholder_public_host():
 def test_urljoin_variants(pub: str, path: str, expected: str):
     s = _S(public_base_url=pub, secure_details_base_url=path)
     assert s.resolved_secure_details_base_url() == expected
+
+
+def test_api_port_reads_port_env(monkeypatch):
+    monkeypatch.setenv("PORT", "8010")
+    s = _S()
+    assert s.api_port == 8010
+
+
+def test_api_host_from_env(monkeypatch):
+    monkeypatch.setenv("ADVISOR_API_HOST", "0.0.0.0")
+    s = _S()
+    assert s.api_host == "0.0.0.0"

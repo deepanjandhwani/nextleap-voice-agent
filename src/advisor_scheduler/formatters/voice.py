@@ -61,15 +61,14 @@ _VOICE_TOPIC_PREPARE_RE = re.compile(
 )
 
 _VOICE_TOPIC_COMPACT = (
-    "What topic? Say KYC, SIP, statements, withdrawals, or account changes."
+    "Which topic? KYC, SIP, statements, withdrawals, or account changes."
 )
 _VOICE_PREPARE_TOPIC_COMPACT = (
-    "Which topic do you want guidance for? Say KYC, SIP, statements, withdrawals, or account changes."
+    "Which topic for preparation? KYC, SIP, statements, withdrawals, or account changes."
 )
 _VOICE_INTRO_COMPACT = (
-    "Hi, I'm your NextLeap appointment scheduler. "
-    "Informational support only—not investment advice. "
-    "I can book, reschedule, cancel, check availability, or explain what to prepare. "
+    "Hi! I'm your NextLeap scheduler. "
+    "I can help book, reschedule, cancel, or check availability. "
     "What do you need?"
 )
 

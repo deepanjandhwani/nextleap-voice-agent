@@ -14,7 +14,8 @@ Python chat-first advisor appointment scheduler: deterministic conversation engi
 ```bash
 pip install -e ".[dev]"
 cp .env.example .env   # configure GEMINI_API_KEY etc. as needed
-python -m advisor_scheduler   # http://127.0.0.1:8000 — UI at `/`, API at POST /chat
+python -m advisor_scheduler   # default http://127.0.0.1:8000 — UI at `/`, API at POST /chat
+# If port 8000 is in use: set ADVISOR_API_PORT=8001 (or PORT=8001) and PUBLIC_BASE_URL=http://127.0.0.1:8001 in `.env`
 ```
 
 ## Tests

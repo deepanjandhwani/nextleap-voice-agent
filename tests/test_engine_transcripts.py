@@ -829,6 +829,48 @@ def test_reschedule_lookup_uses_persisted_sheet_rows(engine, llm_stub):
     assert "new day" in r.response.lower()
 
 
+# ---------------------------------------------------------------------------
+# Bug fix: show_availability → BOOK_NEW preserves topic
+# ---------------------------------------------------------------------------
+
+
+def test_availability_to_booking_preserves_topic(engine, llm_stub):
+    """When user checks availability for a topic and then says 'yes' to book,
+    the session.topic should carry over without re-asking."""
+    s = "avail-to-book"
+    # First, set topic on the session directly (simulating an earlier topic selection)
+    sess = engine.sessions.get(s)
+    sess.topic = "KYC / Onboarding"
+    sess.state = "identify_intent"
+
+    r1 = process_message(engine, s, "what's available Thursday?")
+    assert engine.sessions.get(s).state in ("show_availability", "collect_day")
+
+    if engine.sessions.get(s).state == "show_availability":
+        r2 = process_message(engine, s, "yes")
+        sess = engine.sessions.get(s)
+        assert sess.topic == "KYC / Onboarding"
+        assert sess.state != "collect_topic"
+        assert sess.state in ("collect_time", "offer_slots", "confirm_slot", "offer_waitlist")
+
+    assert llm_stub.responses == []
+
+
+def test_mid_flow_book_new_from_availability_preserves_topic(engine, llm_stub):
+    """Explicit BOOK_NEW intent from show_availability should preserve topic."""
+    s = "midflow-book-avail"
+    process_message(engine, s, "what's available Thursday?")
+    sess = engine.sessions.get(s)
+    sess.topic = "SIP / Mandates"
+
+    r = process_message(engine, s, "I want to book an appointment")
+    sess = engine.sessions.get(s)
+    assert sess.topic == "SIP / Mandates"
+    assert sess.state != "collect_topic"
+
+    assert llm_stub.responses == []
+
+
 def test_invalid_secure_link_configuration_uses_safe_fallback(engine, llm_stub):
     engine.settings.secure_details_base_url = "https://example.com/details"
     s = "invalid-secure-link"

@@ -137,7 +137,8 @@ def test_format_for_voice_shortens_standard_greeting():
     out = format_for_voice(raw)
     assert len(out) < len(raw)
     assert "NextLeap" in out
-    assert "investment advice" in out.lower()
+    # Disclaimer intentionally dropped from spoken greeting for brevity (still in chat text)
+    assert "what do you need" in out.lower()
 
 
 def test_format_for_voice_shortens_topic_menu_prompt():
