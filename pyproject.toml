@@ -32,10 +32,15 @@ dev = [
 ]
 
 [project.scripts]
+# Vercel FastAPI entrypoint (Fluid Compute): https://vercel.com/docs/frameworks/backend/fastapi
+app = "advisor_scheduler.api.app:app"
 advisor-google-mcp = "advisor_scheduler.integrations.google_workspace.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+advisor_scheduler = ["api/static/*.html"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

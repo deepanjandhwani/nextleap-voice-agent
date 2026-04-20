@@ -1,0 +1,2 @@
+# Vercel / production install: project + LLM + Google MCP extras (same as pip install ".[llm,mcp]").
+.[llm,mcp]
