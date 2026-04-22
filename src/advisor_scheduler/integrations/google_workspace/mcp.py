@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import threading
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
@@ -39,6 +40,54 @@ IST = ZoneInfo("Asia/Kolkata")
 logger = logging.getLogger(__name__)
 
 
+def _pythonpath_dir_for_mcp_subprocess() -> str:
+    """Directory that must be on ``PYTHONPATH`` so ``python -m advisor_scheduler.…`` can import the package.
+
+    A stdio subprocess does not inherit the parent's ``sys.path``. Serverless
+    runtimes (e.g. Vercel) install deps under ``/var/task/_vendor``; without
+    this, the child raises ``ModuleNotFoundError: No module named 'advisor_scheduler'``.
+    """
+    import advisor_scheduler
+
+    return os.path.dirname(os.path.dirname(os.path.normpath(advisor_scheduler.__file__)))
+
+
+def _env_for_mcp_subprocess() -> dict[str, str]:
+    """Full environment for the MCP child, with ``PYTHONPATH`` extended for imports."""
+    top = _pythonpath_dir_for_mcp_subprocess()
+    out = {k: v for k, v in os.environ.items() if isinstance(v, str)}
+    prev = out.get("PYTHONPATH", "").strip()
+    out["PYTHONPATH"] = top if not prev else f"{top}{os.pathsep}{prev}"
+    return out
+
+
+def _inject_subprocess_env_into_mcp_config(client_source: Any) -> Any:
+    """Copy ``mcpServers`` JSON and ensure each stdio child gets a usable ``PYTHONPATH`` (PaaS)."""
+    if not isinstance(client_source, dict) or "mcpServers" not in client_source:
+        return client_source
+    import copy
+
+    out = copy.deepcopy(client_source)
+    base = _env_for_mcp_subprocess()
+    for _name, spec in list(out.get("mcpServers", {}).items()):
+        if not isinstance(spec, dict):
+            continue
+        if "url" in spec:
+            # Remote (HTTP/SSE) server — not a local ``python -m`` subprocess; skip.
+            continue
+        if "command" not in spec and not spec.get("args"):
+            continue
+        user_env = spec.get("env")
+        if not isinstance(user_env, dict) or not user_env:
+            spec["env"] = dict(base)
+        else:
+            spec["env"] = {
+                **base,
+                **{k: v for k, v in user_env.items() if isinstance(k, str) and isinstance(v, str)},
+            }
+    return out
+
+
 def default_in_repo_mcp_command() -> dict[str, Any]:
     """FastMCP ``mcpServers`` entry that launches the in-repo Python server."""
     import sys
@@ -48,7 +97,7 @@ def default_in_repo_mcp_command() -> dict[str, Any]:
             "advisor-google-workspace": {
                 "command": sys.executable,
                 "args": ["-m", "advisor_scheduler.integrations.google_workspace.server"],
-                "env": {},
+                "env": _env_for_mcp_subprocess(),
             }
         }
     }
@@ -67,9 +116,11 @@ def load_mcp_client_source(settings: Settings) -> Any:
     stripped = raw.strip()
     path = Path(stripped)
     if path.is_file():
-        return json.loads(path.read_text(encoding="utf-8"))
+        return _inject_subprocess_env_into_mcp_config(
+            json.loads(path.read_text(encoding="utf-8"))
+        )
     if stripped.startswith("{") or stripped.startswith("["):
-        return json.loads(stripped)
+        return _inject_subprocess_env_into_mcp_config(json.loads(stripped))
     return stripped
 
 
