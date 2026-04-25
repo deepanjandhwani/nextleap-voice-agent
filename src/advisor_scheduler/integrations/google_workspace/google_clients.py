@@ -23,6 +23,8 @@ from googleapiclient.discovery import build
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "advisor-scheduler"
 DEFAULT_CREDENTIALS_FILENAME = "google-oauth-credentials.json"
 DEFAULT_TOKEN_FILENAME = "google-token.json"
+GOOGLE_OAUTH_CREDENTIALS_JSON_ENV = "GOOGLE_OAUTH_CREDENTIALS_JSON"
+GOOGLE_OAUTH_TOKEN_JSON_ENV = "GOOGLE_OAUTH_TOKEN_JSON"
 
 # Combined scopes for one consent across Calendar, Sheets, and Gmail.
 SCOPES: tuple[str, ...] = (
@@ -51,6 +53,31 @@ def token_path() -> Path:
     )
 
 
+def _json_object_from_env(env_name: str) -> dict | None:
+    raw = os.environ.get(env_name)
+    if not raw or not raw.strip():
+        return None
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{env_name} must contain valid JSON") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"{env_name} must contain a JSON object")
+    return value
+
+
+def _credentials_from_token_env() -> Credentials | None:
+    token_info = _json_object_from_env(GOOGLE_OAUTH_TOKEN_JSON_ENV)
+    if token_info is None:
+        return None
+    try:
+        return Credentials.from_authorized_user_info(token_info, list(SCOPES))
+    except ValueError as exc:
+        raise ValueError(
+            f"{GOOGLE_OAUTH_TOKEN_JSON_ENV} is not a valid Google OAuth token JSON"
+        ) from exc
+
+
 def _interactive_auth_allowed() -> bool:
     """Refuse to spawn a browser when running as a non-interactive MCP child."""
     flag = os.environ.get("ADVISOR_MCP_ALLOW_INTERACTIVE_AUTH", "")
@@ -65,8 +92,8 @@ def load_credentials() -> Credentials:
     needs to refresh tokens silently.
     """
     tok = token_path()
-    creds: Credentials | None = None
-    if tok.exists():
+    creds = _credentials_from_token_env()
+    if creds is None and tok.exists():
         try:
             creds = Credentials.from_authorized_user_file(str(tok), list(SCOPES))
         except (ValueError, json.JSONDecodeError):
@@ -81,21 +108,27 @@ def load_credentials() -> Credentials:
         return creds
 
     creds_path = credentials_path()
-    if not creds_path.exists():
+    client_config = _json_object_from_env(GOOGLE_OAUTH_CREDENTIALS_JSON_ENV)
+    if client_config is None and not creds_path.exists():
         raise FileNotFoundError(
             "Google OAuth client credentials not found. Place desktop OAuth "
-            f"client JSON at {creds_path} or set GOOGLE_OAUTH_CREDENTIALS."
+            f"client JSON at {creds_path}, set GOOGLE_OAUTH_CREDENTIALS, "
+            f"or set {GOOGLE_OAUTH_CREDENTIALS_JSON_ENV}."
         )
 
     if not _interactive_auth_allowed():
         raise RuntimeError(
             "No usable Google token at "
             f"{tok}. Run `python scripts/setup_google_mcp.py` once to "
-            "authorize Calendar, Sheets, and Gmail; the FastMCP server "
-            "refuses to open a browser from a stdio child process."
+            "authorize Calendar, Sheets, and Gmail, or set "
+            f"{GOOGLE_OAUTH_TOKEN_JSON_ENV}; the FastMCP server refuses to "
+            "open a browser from a stdio child process."
         )
 
-    flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), list(SCOPES))
+    if client_config is not None:
+        flow = InstalledAppFlow.from_client_config(client_config, list(SCOPES))
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), list(SCOPES))
     creds = flow.run_local_server(port=0)
     _save_credentials(creds)
     return creds

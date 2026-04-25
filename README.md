@@ -31,7 +31,7 @@ Connect the GitHub repo in the Vercel dashboard (or use `vercel link` / `vercel 
 
 - **`PUBLIC_BASE_URL`** — set to your production origin (for example `https://your-project.vercel.app`, no trailing slash) so secure-link and CORS behavior match that host.
 - **`GEMINI_API_KEY`**, **`DEEPGRAM_API_KEY`** — set if you use LLM fallbacks and server-side voice turns.
-- **Google / MCP** — same variables as local when `USE_MCP=true`.
+- **Google / MCP** — when `USE_MCP=true`, set Calendar/Sheets IDs plus Google OAuth JSON secrets. On serverless hosts, prefer `GOOGLE_OAUTH_TOKEN_JSON` and `GOOGLE_OAUTH_CREDENTIALS_JSON` over local file paths.
 
 **Serverless caveats:** session state is **in-memory** in a single process. On Vercel, different requests may hit different instances or cold starts, so conversation continuity can differ from a single local `uvicorn` run until you add shared session storage. Long turns (especially `/voice-turn`) may need a higher **function max duration** in the Vercel project if you hit timeouts.
 
