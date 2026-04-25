@@ -19,6 +19,12 @@ def _token_info() -> dict[str, object]:
     }
 
 
+def _expired_token_info() -> dict[str, object]:
+    token = _token_info()
+    token["expiry"] = "2000-01-01T00:00:00Z"
+    return token
+
+
 def test_load_credentials_reads_authorized_user_json_from_env(monkeypatch, tmp_path):
     monkeypatch.setenv("GOOGLE_OAUTH_TOKEN_JSON", json.dumps(_token_info()))
     monkeypatch.setenv("GOOGLE_OAUTH_TOKEN", str(tmp_path / "missing-token.json"))
@@ -31,6 +37,27 @@ def test_load_credentials_reads_authorized_user_json_from_env(monkeypatch, tmp_p
     assert creds.token == "access-token"
     assert creds.refresh_token == "refresh-token"
     assert creds.client_id == "client-id.apps.googleusercontent.com"
+
+
+def test_env_token_refresh_does_not_require_writing_token_file(monkeypatch, tmp_path):
+    monkeypatch.setenv("GOOGLE_OAUTH_TOKEN_JSON", json.dumps(_expired_token_info()))
+    monkeypatch.setenv("GOOGLE_OAUTH_TOKEN", str(tmp_path / "missing-token.json"))
+    monkeypatch.setenv("GOOGLE_OAUTH_CREDENTIALS", str(tmp_path / "missing-client.json"))
+    monkeypatch.delenv("GOOGLE_OAUTH_CREDENTIALS_JSON", raising=False)
+    monkeypatch.delenv("ADVISOR_MCP_ALLOW_INTERACTIVE_AUTH", raising=False)
+
+    def fake_refresh(self, request):
+        self.token = "refreshed-access-token"
+
+    def fail_if_saved(creds):
+        raise AssertionError("env-loaded OAuth token should not require filesystem writes")
+
+    monkeypatch.setattr(google_clients.Credentials, "refresh", fake_refresh)
+    monkeypatch.setattr(google_clients, "_save_credentials", fail_if_saved)
+
+    creds = google_clients.load_credentials()
+
+    assert creds.token == "refreshed-access-token"
 
 
 def test_credentials_json_env_avoids_missing_file_error(monkeypatch, tmp_path):

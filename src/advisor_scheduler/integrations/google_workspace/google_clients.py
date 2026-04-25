@@ -93,6 +93,7 @@ def load_credentials() -> Credentials:
     """
     tok = token_path()
     creds = _credentials_from_token_env()
+    loaded_from_env = creds is not None
     if creds is None and tok.exists():
         try:
             creds = Credentials.from_authorized_user_file(str(tok), list(SCOPES))
@@ -104,7 +105,8 @@ def load_credentials() -> Credentials:
 
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(Request())
-        _save_credentials(creds)
+        if not loaded_from_env:
+            _save_credentials(creds)
         return creds
 
     creds_path = credentials_path()

@@ -33,6 +33,20 @@ Connect the GitHub repo in the Vercel dashboard (or use `vercel link` / `vercel 
 - **`GEMINI_API_KEY`**, **`DEEPGRAM_API_KEY`** — set if you use LLM fallbacks and server-side voice turns.
 - **Google / MCP** — when `USE_MCP=true`, set Calendar/Sheets IDs plus Google OAuth JSON secrets. On serverless hosts, prefer `GOOGLE_OAUTH_TOKEN_JSON` and `GOOGLE_OAUTH_CREDENTIALS_JSON` over local file paths.
 
+Minimum live-Google Vercel variables:
+
+```env
+PUBLIC_BASE_URL=https://your-project.vercel.app
+USE_MCP=true
+GOOGLE_CALENDAR_ID=your-calendar-id
+GOOGLE_SHEETS_SPREADSHEET_ID=your-spreadsheet-id
+GOOGLE_SHEETS_TAB=Advisor Pre-Bookings
+GOOGLE_OAUTH_TOKEN_JSON={"token":"...","refresh_token":"...",...}
+GOOGLE_OAUTH_CREDENTIALS_JSON={"installed":{...}}
+```
+
+Generate the two Google JSON values locally with `python scripts/setup_google_mcp.py`, then paste the contents of `~/.config/advisor-scheduler/google-token.json` and `~/.config/advisor-scheduler/google-oauth-credentials.json` into the Vercel project secrets. Vercel does not have access to those local files at runtime.
+
 **Serverless caveats:** session state is **in-memory** in a single process. On Vercel, different requests may hit different instances or cold starts, so conversation continuity can differ from a single local `uvicorn` run until you add shared session storage. Long turns (especially `/voice-turn`) may need a higher **function max duration** in the Vercel project if you hit timeouts.
 
 ## Tests

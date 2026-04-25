@@ -108,13 +108,15 @@ operator view, add the 16 column headers in row 1 in the order documented in
 
 ## Step 4: Update `.env`
 
+Local development:
+
 ```env
 USE_MCP=true
 
 GOOGLE_CALENDAR_ID=your-email@gmail.com
 GOOGLE_SHEETS_SPREADSHEET_ID=1ABC_your_spreadsheet_id_xyz
 GOOGLE_SHEETS_TAB=Advisor Pre-Bookings
-SECURE_DETAILS_BASE_URL=https://secure.your-domain.com/details
+PUBLIC_BASE_URL=http://127.0.0.1:8000
 
 # Optional. When unset, the adapters auto-launch the in-repo server
 # module directly. The setup helper writes this file:
@@ -122,6 +124,26 @@ MCP_GOOGLE_CONFIG=/Users/you/.config/advisor-scheduler/mcp-google.json
 
 ADVISOR_EMAIL=your-email@gmail.com
 ```
+
+Vercel / serverless deployment:
+
+```env
+PUBLIC_BASE_URL=https://your-project.vercel.app
+USE_MCP=true
+GOOGLE_CALENDAR_ID=your-email@gmail.com
+GOOGLE_SHEETS_SPREADSHEET_ID=1ABC_your_spreadsheet_id_xyz
+GOOGLE_SHEETS_TAB=Advisor Pre-Bookings
+GOOGLE_OAUTH_TOKEN_JSON={"token":"...","refresh_token":"...",...}
+GOOGLE_OAUTH_CREDENTIALS_JSON={"installed":{...}}
+ADVISOR_EMAIL=your-email@gmail.com
+```
+
+Use the full contents of `~/.config/advisor-scheduler/google-token.json`
+for `GOOGLE_OAUTH_TOKEN_JSON` and
+`~/.config/advisor-scheduler/google-oauth-credentials.json` for
+`GOOGLE_OAUTH_CREDENTIALS_JSON`. File path variables such as
+`GOOGLE_OAUTH_TOKEN` and `GOOGLE_OAUTH_CREDENTIALS` are only useful when
+those files exist on the same machine that runs the app.
 
 ## Step 5: Verify Setup
 
@@ -165,7 +187,15 @@ python -m pytest tests/test_mcp_adapters.py -m mcp -v
 
 The FastMCP child process refuses to spawn a browser from a stdio
 context. Re-run `python scripts/setup_google_mcp.py` to refresh the
-cached token.
+cached token. On Vercel, paste that token file into
+`GOOGLE_OAUTH_TOKEN_JSON` and redeploy.
+
+### "Google OAuth client credentials not found" on Vercel
+
+Set `GOOGLE_OAUTH_CREDENTIALS_JSON` to the full desktop OAuth client
+JSON and redeploy. Vercel cannot read
+`~/.config/advisor-scheduler/google-oauth-credentials.json` from your
+local machine.
 
 ### "Token expired" or 401 errors
 

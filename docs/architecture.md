@@ -296,7 +296,7 @@ User audio
 
 The same FastAPI app can run on **[Vercel](https://vercel.com/docs/frameworks/backend/fastapi)** using [`api/index.py`](../api/index.py) as the detected entrypoint (re-export of `advisor_scheduler.api.app:app`). Static HTML is duplicated under [`public/`](../public/) (`index.html`, `secure-details/index.html`) so the platform can serve the UI from the CDN; keep those files in sync when editing [`api/static/`](../src/advisor_scheduler/api/static/).
 
-Configure **`PUBLIC_BASE_URL`**, **`GEMINI_API_KEY`**, **`DEEPGRAM_API_KEY`**, and Google/MCP variables in the Vercel project to match production. Expect **serverless** behavior: in-memory **session** state is not guaranteed to stick to one instance across requests; allow enough **function duration** for `/voice-turn` (STT + engine + TTS). Details and caveats are in the repo root [README.md](../README.md).
+Configure **`PUBLIC_BASE_URL`**, **`GEMINI_API_KEY`**, **`DEEPGRAM_API_KEY`**, and Google/MCP variables in the Vercel project to match production. When `USE_MCP=true` on Vercel, Google OAuth should be supplied as secret JSON values (`GOOGLE_OAUTH_TOKEN_JSON` and `GOOGLE_OAUTH_CREDENTIALS_JSON`), not local file paths, because serverless functions cannot read `~/.config/advisor-scheduler/*` from the developer machine. Expect **serverless** behavior: in-memory **session** state is not guaranteed to stick to one instance across requests; allow enough **function duration** for `/voice-turn` (STT + engine + TTS). Details and caveats are in the repo root [README.md](../README.md).
 
 ### `POST /chat`
 

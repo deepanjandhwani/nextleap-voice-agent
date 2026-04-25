@@ -76,6 +76,8 @@ further interactive auth is needed unless the refresh token is revoked.
 
 ## Step 4: Update `.env`
 
+For local development, file paths are fine:
+
 ```env
 USE_MCP=true
 
@@ -88,6 +90,28 @@ GOOGLE_SHEETS_TAB=Advisor Pre-Bookings
 # the same JSON config and prints its absolute path.
 MCP_GOOGLE_CONFIG=/Users/you/.config/advisor-scheduler/mcp-google.json
 ```
+
+For Vercel or another serverless host, do **not** point at local
+`~/.config` files. Paste the JSON contents into environment variables
+instead:
+
+```env
+PUBLIC_BASE_URL=https://your-project.vercel.app
+USE_MCP=true
+GOOGLE_CALENDAR_ID=your-email@gmail.com
+GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id
+GOOGLE_SHEETS_TAB=Advisor Pre-Bookings
+GOOGLE_OAUTH_TOKEN_JSON={"token":"...","refresh_token":"...",...}
+GOOGLE_OAUTH_CREDENTIALS_JSON={"installed":{...}}
+```
+
+`GOOGLE_OAUTH_TOKEN_JSON` should be the full contents of
+`~/.config/advisor-scheduler/google-token.json`.
+`GOOGLE_OAUTH_CREDENTIALS_JSON` should be the full contents of
+`~/.config/advisor-scheduler/google-oauth-credentials.json`. The
+`redirect_uris: ["http://localhost"]` value in desktop OAuth credentials
+is expected because interactive consent happens locally; production only
+uses the cached refresh token.
 
 ## Step 5: Verify
 
@@ -123,7 +147,15 @@ place where interactive consent runs is the setup script.
 
 ### "No usable Google token at …" when starting the server
 Re-run `python scripts/setup_google_mcp.py` to refresh the cached
-token.
+token. On Vercel, make sure the resulting `google-token.json` contents
+are set as `GOOGLE_OAUTH_TOKEN_JSON`.
+
+### "Google OAuth client credentials not found" on Vercel
+
+The deployment is still looking for a local credentials file. Set
+`GOOGLE_OAUTH_CREDENTIALS_JSON` to the full contents of
+`google-oauth-credentials.json`, redeploy, and confirm the deployed code
+includes the JSON-env support in `google_clients.py`.
 
 ### Permission errors on Sheet/Calendar
 Verify the IDs in `.env` are correct and that the authenticated

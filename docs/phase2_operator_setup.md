@@ -51,7 +51,7 @@ Copy `.env.example` to `.env` and fill in the following (all values are required
 
 ```dotenv
 # --- Core ---
-SECURE_DETAILS_BASE_URL=https://secure.your-domain.com/details
+PUBLIC_BASE_URL=https://your-app.example.com
 ADVISOR_EMAIL=advisor@your-domain.com
 
 # --- Gemini ---
@@ -69,6 +69,20 @@ GOOGLE_SHEETS_TAB=Advisor Pre-Bookings
 # via the current Python interpreter.
 # MCP_GOOGLE_CONFIG=/Users/<you>/.config/advisor-scheduler/mcp-google.json
 ```
+
+For Vercel or another serverless host, also set:
+
+```dotenv
+GOOGLE_OAUTH_TOKEN_JSON={"token":"...","refresh_token":"...",...}
+GOOGLE_OAUTH_CREDENTIALS_JSON={"installed":{...}}
+```
+
+These are the full contents of
+`~/.config/advisor-scheduler/google-token.json` and
+`~/.config/advisor-scheduler/google-oauth-credentials.json` after
+running `python scripts/setup_google_mcp.py` locally. Do not use
+`GOOGLE_OAUTH_TOKEN` or `GOOGLE_OAUTH_CREDENTIALS` on Vercel unless the
+referenced files are created inside the function runtime.
 
 ---
 
@@ -143,6 +157,6 @@ Phase 2 is complete when:
 - [ ] `USE_MCP=true`, in-repo Python FastMCP server starts cleanly
 - [ ] Live smoke test passes (`MCP_LIVE_TEST=1 pytest tests/test_mcp_adapters.py -m mcp`)
 - [ ] All five flows (booking, waitlist, reschedule, cancel, availability) produce correct downstream records
-- [ ] `SECURE_DETAILS_BASE_URL` points to a real HTTPS endpoint (placeholder/example URLs are rejected by runtime validation)
+- [ ] `PUBLIC_BASE_URL` points to the real app origin, or `SECURE_DETAILS_BASE_URL` points to a real HTTPS details endpoint (placeholder/example URLs are rejected by runtime validation)
 - [ ] No booking side effect fires without explicit user confirmation
 - [ ] This document is followed top-to-bottom without gaps

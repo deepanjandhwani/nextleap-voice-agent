@@ -36,7 +36,7 @@
 
 - **ASGI entry:** [`api/index.py`](../api/index.py) re-exports `app` from [`advisor_scheduler/api/app.py`](../src/advisor_scheduler/api/app.py) so the Vercel builder detects FastAPI.
 - **Packaging:** [`pyproject.toml`](../pyproject.toml) declares `[project.scripts] app = "advisor_scheduler.api.app:app"` and `[tool.setuptools.package-data]` for `api/static/*.html` inside the installed package.
-- **Operator:** set `PUBLIC_BASE_URL` and secrets in the Vercel project; see repo root [README.md](../README.md). In-memory sessions may not match a single long-lived local server across invocations.
+- **Operator:** set `PUBLIC_BASE_URL` and secrets in the Vercel project; with live Google MCP, use `GOOGLE_OAUTH_TOKEN_JSON` and `GOOGLE_OAUTH_CREDENTIALS_JSON` for serverless runtime instead of local OAuth file paths. See repo root [README.md](../README.md). In-memory sessions may not match a single long-lived local server across invocations.
 
 ## Session states (actual strings in code)
 

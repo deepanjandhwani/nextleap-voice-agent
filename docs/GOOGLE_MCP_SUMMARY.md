@@ -87,14 +87,19 @@ ChatApp → AdapterLayer → PythonFastMcpServer → {Calendar, Sheets, Gmail} A
 
 4. Set Google resource IDs in `.env`:
    ```env
+   PUBLIC_BASE_URL=http://127.0.0.1:8000
    USE_MCP=true
    GOOGLE_CALENDAR_ID=your-email@gmail.com
    GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id
    GOOGLE_SHEETS_TAB=Advisor Pre-Bookings
-   SECURE_DETAILS_BASE_URL=https://secure.your-domain.com/details
    # Optional; defaults to the in-repo Python server.
    # MCP_GOOGLE_CONFIG=/Users/you/.config/advisor-scheduler/mcp-google.json
    ```
+
+   On Vercel, also set `GOOGLE_OAUTH_TOKEN_JSON` and
+   `GOOGLE_OAUTH_CREDENTIALS_JSON` to the full contents of the generated
+   local JSON files. Serverless runtime cannot read local
+   `~/.config/advisor-scheduler/*` paths.
 
 5. Verify:
    ```bash

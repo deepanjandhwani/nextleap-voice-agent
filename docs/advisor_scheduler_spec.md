@@ -219,7 +219,7 @@ The secure link is for collecting contact details outside the conversation.
 
 The conversation itself must not collect contact details.
 
-The secure link uses a configured HTTPS base URL read from the environment variable `SECURE_DETAILS_BASE_URL`. The assistant appends the booking code as a query parameter. Placeholder/example-style URLs should be treated as invalid and should not be shown to the user.
+The secure link uses a configured HTTPS base URL. In deployed environments, `PUBLIC_BASE_URL` can point to the app origin and the runtime will use `/secure-details`; `SECURE_DETAILS_BASE_URL` may be set when an explicit external details endpoint is needed. The assistant appends the booking code as a query parameter. Placeholder/example-style URLs should be treated as invalid and should not be shown to the user.
 
 Example:
 `https://secure.nextleap.example/details?code=NL-A742`
